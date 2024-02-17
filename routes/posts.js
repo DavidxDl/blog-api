@@ -51,7 +51,7 @@ router.post(
 router.get(
   "/comments",
   asyncHandler(async (req, res) => {
-    const comments = await Comments.find();
+    const comments = await Comments.find({}).exec();
     if (!comments) {
       res.statusCode = 404;
       return res.json({
