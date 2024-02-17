@@ -1,9 +1,22 @@
 const express = require("express");
 const router = express.Router();
+const jwt = require("jsonwebtoken");
 const asyncHandler = require("express-async-handler");
 
 const Posts = require("../models/post");
 const Comments = require("../models/comment");
+
+router.get('/login', asyncHandler(async(req, res) => {
+  const user = {
+    username:  req.body.username,
+    password : req.body.password,
+  }
+  
+  if(process.env.ADMIN_USERNAME === user.username 
+    && process.env.ADMIN_PASSWORD === user.password) 
+    jwt.sign(user, process.env.ACCESS_TOKEN_SECRET)
+
+}))
 // READ
 router.get(
   "/",
@@ -21,10 +34,13 @@ router.get(
 // CREATE
 router.post(
   "/",
+  jwt.verify()
   asyncHandler(async (req, res) => {
+    console.log(req.body);
     const post = new Posts({
       title: req.body.title,
       text: req.body.text,
+      published: req.body.published,
       timestamp: new Date().toLocaleString(),
     });
     await post.save();
@@ -136,9 +152,34 @@ router.put(
     const updatedPost = new Posts({
       title: req.body.title,
       text: req.body.text,
+      published: req.body.published,
       timestamp: new Date().toLocaleString(),
       _id: req.params.postId,
     });
+    await Posts.findByIdAndUpdate(req.params.postId, updatedPost, {});
+    return res.json(updatedPost);
+  }),
+);
+
+router.patch(
+  "/:postId",
+  asyncHandler(async (req, res) => {
+    const post = await Posts.findById(req.params.postId);
+    if (post === null) {
+      res.statusCode = 404;
+      return res.json({
+        message: `Post with id ${req.params.postId} not found!`,
+      });
+    }
+
+    const updatedPost = new Posts({
+      title: req.body.title,
+      text: req.body.text,
+      published: req.body.published,
+      timestamp: new Date().toLocaleString(),
+      _id: req.params.postId,
+    });
+    console.log(req.body, req.params, post, `updated post ${updatedPost}`);
     await Posts.findByIdAndUpdate(req.params.postId, updatedPost, {});
     return res.json(updatedPost);
   }),
