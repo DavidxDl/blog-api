@@ -6,17 +6,17 @@ const asyncHandler = require("express-async-handler");
 const Posts = require("../models/post");
 const Comments = require("../models/comment");
 
-router.get('/login', asyncHandler(async(req, res) => {
-  const user = {
-    username:  req.body.username,
-    password : req.body.password,
-  }
-  
-  if(process.env.ADMIN_USERNAME === user.username 
-    && process.env.ADMIN_PASSWORD === user.password) 
-    jwt.sign(user, process.env.ACCESS_TOKEN_SECRET)
+function authenticateToken(req, res, next) {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1];
+  if (token == null) res.sendStatus(401);
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET,  (err, user) => {
+    if (err) res.sendStatus(403);
+    req.user = user;
+    next();
+  })
+}
 
-}))
 // READ
 router.get(
   "/",
@@ -34,7 +34,6 @@ router.get(
 // CREATE
 router.post(
   "/",
-  jwt.verify()
   asyncHandler(async (req, res) => {
     console.log(req.body);
     const post = new Posts({
@@ -163,6 +162,7 @@ router.put(
 
 router.patch(
   "/:postId",
+  authenticateToken,
   asyncHandler(async (req, res) => {
     const post = await Posts.findById(req.params.postId);
     if (post === null) {
